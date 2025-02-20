@@ -1,5 +1,6 @@
 import com.sun.net.httpserver.Headers;
 import com.sun.net.httpserver.HttpExchange;
+import com.sun.net.httpserver.HttpHandler;
 import com.sun.net.httpserver.HttpServer;
 
 import java.io.BufferedReader;
@@ -13,6 +14,9 @@ import java.net.InetSocketAddress;
 import java.net.URI;
 import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 
 public class Main {
     public static void main(String[] args) {
@@ -27,7 +31,7 @@ public class Main {
 
     private static HttpServer makeServer() throws IOException {
         String host = "localhost";
-        InetSocketAddress address = new InetSocketAddress(host, 8080);
+        InetSocketAddress address = new InetSocketAddress(host, 9889);
 
         System.out.printf(
                 "Started server on %s:%d",
@@ -107,6 +111,52 @@ public class Main {
             reader.lines().forEach(line -> write(writer, "\t", line));
         } catch (IOException e) {
             e.printStackTrace();
+        }
+    }
+
+
+
+// пример
+
+
+
+    private static void initRoutes1(HttpServer server) {
+        server.createContext("/", new MyHandler());
+        server.createContext("/apps/", new MyHandler());
+        server.createContext("/apps/profile", new MyHandler());
+    }
+
+    static class MyHandler implements HttpHandler {
+        @Override
+        public void handle(HttpExchange exchange) throws IOException {
+            String requestPath = exchange.getRequestURI().getPath();
+            Path filePath = Paths.get("path/to/your/static/files" + requestPath);
+
+            if (Files.exists(filePath)) {
+                String mimeType = getMimeType(filePath);
+                exchange.getResponseHeaders().add("Content-Type", mimeType);
+                exchange.sendResponseHeaders(200, Files.size(filePath));
+                try (OutputStream os = exchange.getResponseBody()) {
+                    Files.copy(filePath, os);
+                }
+            } else {
+                String response = "File not found";
+                exchange.sendResponseHeaders(404, response.length());
+                try (OutputStream os = exchange.getResponseBody()) {
+                    os.write(response.getBytes());
+                }
+            }
+        }
+
+        private String getMimeType(Path filePath) throws IOException {
+            String fileName = filePath.getFileName().toString();
+            if (fileName.endsWith(".css")) {
+                return "text/css";
+            } else if (fileName.endsWith(".html")) {
+                return "text/html";
+            } else {
+                return "text/plain";
+            }
         }
     }
 }
