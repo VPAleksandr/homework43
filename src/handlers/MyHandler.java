@@ -52,7 +52,7 @@ public class MyHandler {
 
     private static void handleRequestProfile(HttpExchange exchange) {
         try {
-            if (isFile(exchange)) {
+            if (!getMimeType(exchange.getRequestURI().getPath()).equalsIgnoreCase("text/plain; charset=utf-8")) {
                 handleRequestFile(exchange);
             } else {
                 exchange.getResponseHeaders().add("Content-Type", "application/json; charset=utf-8");
@@ -70,6 +70,7 @@ public class MyHandler {
                     write(writer, "HTTP method", method);
                     write(writer, "Request", uri.toString());
                     write(writer, "Handler", path);
+                    write(writer, "You got document - ", "json");
                     writeHeaders(writer, "Request headers", exchange.getRequestHeaders());
                     writeData(writer, exchange);
                     writer.flush();
@@ -82,7 +83,7 @@ public class MyHandler {
 
     private static void handleRequestApps(HttpExchange exchange) {
         try {
-            if (isFile(exchange)) {
+            if (!getMimeType(exchange.getRequestURI().getPath()).equalsIgnoreCase("text/plain; charset=utf-8")) {
                 handleRequestFile(exchange);
             } else {
                 exchange.getResponseHeaders().add("Content-Type", "application/xml; charset=utf-8");
@@ -100,6 +101,7 @@ public class MyHandler {
                     write(writer, "HTTP method", method);
                     write(writer, "Request", uri.toString());
                     write(writer, "Handler", path);
+                    write(writer, "You got document - ", "XML");
                     writeHeaders(writer, "Request headers", exchange.getRequestHeaders());
                     writeData(writer, exchange);
                     writer.flush();
@@ -112,7 +114,10 @@ public class MyHandler {
 
     private static void handleRequest(HttpExchange exchange) {
             try {
-                if (isFile(exchange)) {
+                URI uri = exchange.getRequestURI();
+
+                String path = exchange.getHttpContext().getPath();
+                if (!getMimeType(exchange.getRequestURI().getPath()).equalsIgnoreCase("text/plain; charset=utf-8")) {
                     handleRequestFile(exchange);
                 } else {
                     exchange.getResponseHeaders().add("Content-Type", "text/plain; charset=utf-8");
@@ -123,9 +128,7 @@ public class MyHandler {
 
                     try (PrintWriter writer = getWriterFrom(exchange)) {
                         String method = exchange.getRequestMethod();
-                        URI uri = exchange.getRequestURI();
 
-                        String path = exchange.getHttpContext().getPath();
 
                         write(writer, "HTTP method", method);
                         write(writer, "Request", uri.toString());
@@ -176,10 +179,6 @@ public class MyHandler {
         } catch (IOException e) {
             e.printStackTrace();
         }
-    }
-
-    private static boolean isFile(HttpExchange exchange) {
-        return Files.exists(Path.of("src/" + exchange.getRequestURI().getPath()));
     }
 
     private static String getMimeType(String filePath) {
